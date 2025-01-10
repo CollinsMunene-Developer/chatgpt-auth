@@ -1,0 +1,1 @@
+export {default as backgroundimg} from './background.png'
