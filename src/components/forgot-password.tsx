@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2,  Mail } from "lucide-react";
 import { emailRules } from "./auth-validation-alert";
 import Link from 'next/link';
+import { forgotPassword } from "@/actions/auth-service";
 
 
 export function ForgotPasswordForm({
@@ -35,9 +36,29 @@ export function ForgotPasswordForm({
 
     setIsSubmitting(true);
     try {
-      await onSubmit?.(email);
+      const response = await forgotPassword(email);
+      
+      if (response.error) {
+        setError(response.error.message);
+        return;
+      }
+      
       setIsSuccess(true);
       setEmail(""); // Clear the form after successful submission
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await forgotPassword(email);
+      if (response.error) {
+        setError(response.error.message);
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -64,11 +85,11 @@ export function ForgotPasswordForm({
 
           <div className=" flex justify-between">
             <Link href="/auth/login" >
-            <Button variant="outline"  className="text-primary">
+            <Button variant="outline"  className="text-primary" disabled={isSubmitting} >
             Back to login
           </Button>
             </Link>
-            <Button variant="outline" className="text-primary">
+            <Button variant="outline" className="text-primary" onClick={handleResendEmail} disabled={isSubmitting} >
             Resend email
           </Button>
           </div>
@@ -117,7 +138,7 @@ export function ForgotPasswordForm({
 
           <div className="text-center text-sm">
             Remember your password?{" "}
-            <a href="#" className="font-medium underline underline-offset-4 hover:text-primary">
+            <a href="/auth/login" className="font-medium underline underline-offset-4 hover:text-primary">
               Back to login
             </a>
           </div>

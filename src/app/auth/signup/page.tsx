@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/login-form"
 import { ModeToggle } from "@/components/mode-toggle"
-import SignupForm from "@/components/signup-form"
+import { SignupForm } from "@/components/signup-form"
+
 import { backgroundimg } from "@/public/images/images"
 import { CloudCogIcon } from "lucide-react"
 import Image from "next/image"

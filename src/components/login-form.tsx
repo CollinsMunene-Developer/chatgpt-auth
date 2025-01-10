@@ -13,6 +13,7 @@ import {
 } from "./auth-validation-alert";
 import { Loader2 } from "lucide-react";
 import { SuccessIndicator } from "./success-indicator";
+import { login } from "@/actions/auth-service";
 
 export function LoginForm({
   className,
@@ -49,7 +50,17 @@ export function LoginForm({
 
     setIsSubmitting(true);
     try {
-      await onSubmit?.(email, password);
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+
+      const response = await login(formData);
+      
+      if (response.error) {
+        setError(response.error.message);
+        return;
+      }
+      // Successful login is handled by the auth service redirect
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {

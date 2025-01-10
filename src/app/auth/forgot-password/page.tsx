@@ -2,9 +2,9 @@
 import ForgotPasswordForm from "@/components/forgot-password"
 
 import { ModeToggle } from "@/components/mode-toggle"
-import { backgroundimg } from "@/public/images/images"
+
 import { CloudCogIcon } from "lucide-react"
-import Image from "next/image"
+
 
 
 
