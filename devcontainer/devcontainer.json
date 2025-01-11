@@ -1,0 +1,28 @@
+{
+    "name": "aorist labs website",
+    "dockerFile": "Dockerfile.dev",
+    "forwardPorts": [3000],
+    "remoteUser": "node",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.azurecli"
+            ]
+        }
+    },
+    "remoteEnv": {
+        "PATH": "${containerEnv:PATH}:/usr/local/share/npm-global/bin"
+    },
+    "postCreateCommand": "sudo chown node:node /app && npm install",
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/node/.azure,type=bind"
+    ],
+    "runArgs": ["--init"]
+}
