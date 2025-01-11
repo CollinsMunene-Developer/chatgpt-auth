@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/app/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export type AuthError = {
   message: string
@@ -64,6 +65,7 @@ export async function login(formData: FormData): Promise<AuthResponse> {
 }
 
     export async function signup(formData: FormData): Promise<AuthResponse> {
+      cookies();
     const supabase = await createClient()
 
     const email = formData.get('email') as string
@@ -80,19 +82,56 @@ export async function login(formData: FormData): Promise<AuthResponse> {
     }
 
     // Check if user already exists
-    const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single()
+    // const { data: existingUser } = await supabase
+    //     .from('users')
+    //     .select('id')
+    //     .eq('email', email)
+    //     .single()
 
-    if (existingUser) {
-        return {
-        error: {
-            message: 'An account with this email already exists',
-            code: 'USER_EXISTS'
-        }
-        }
+    // if (existingUser) {
+    //     return {
+    //     error: {
+    //         message: 'An account with this email already exists',
+    //         code: 'USER_EXISTS'
+    //     }
+    //     }
+    // }
+
+    try {
+         // Check user status first
+         const { data : statusData, error: statusError } = await supabase.rpc('check_user_status', {
+          email: email
+         } )
+         if(statusError ){
+          console.error('Error checking user status ',statusError)
+          return {
+            error: {
+              message: 'Error checking user status',
+              code: 'STATUS_ERROR'
+            },
+            success: false
+          }
+         }
+
+         if(statusData?.exist){
+          console.error('User already exists',  statusData)
+          return {
+            error: {
+              message: 'User already exists',
+              code: 'USER_EXISTS'
+            },
+            success: false
+          }
+
+         }
+         // proceed with the signup process
+         const redirectUrl = new URL(`${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`)
+         redirectUrl.searchParams.set('email-verify', email)
+
+         
+      
+    } catch (error) {
+      
     }
 
     // Create the user
