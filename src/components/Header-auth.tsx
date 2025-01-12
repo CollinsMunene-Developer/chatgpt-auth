@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from '@/app/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import { ModeToggle } from './mode-toggle';
 
 const UserNav = () => {
   const [user, setUser] = useState<{
@@ -102,6 +103,9 @@ const UserNav = () => {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/settings')}>
           Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/settings')}>
+          <ModeToggle /> Change mode
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
