@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import { signup } from "@/actions/auth-service";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function SignupForm({
   className,
@@ -284,6 +285,13 @@ export function SignupForm({
             Sign up with Microsoft
           </Button>
         </div>
+        <div className="" >
+        Already  have an account?{" "}
+        <Link href="/auth/login" className="underline underline-offset-4">
+          Log in
+        </Link>
+      </div>
+        
     </div>
 
     

@@ -15,6 +15,7 @@
                 "ms-vscode.azurecli"
             ]
         }
+        
     },
     "remoteEnv": {
         "PATH": "${containerEnv:PATH}:/usr/local/share/npm-global/bin"
