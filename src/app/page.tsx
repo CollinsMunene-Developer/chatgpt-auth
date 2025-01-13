@@ -11,7 +11,8 @@ import {
   Phone,
   MapPin,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  CloudCogIcon
 } from 'lucide-react';
 import Image, { StaticImageData } from 'next/image';
 import { motion } from 'framer-motion';
@@ -83,14 +84,17 @@ const Page = () => {
       {/* Header Section */}
       <header className="border-b backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-20">
             <motion.div 
               className="flex items-center space-x-2"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <Terminal className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">DeployMaster</span>
+              <div className="class flex items-center gap-2 font-medium justify-start">
+
+               <CloudCogIcon className="size-4" />
+              <p><strong className="text-xl font-bold">CLOUD</strong><span >MAGIC</span></p>
+              </div>
             </motion.div>
             
             <nav className="hidden md:flex items-center space-x-6">

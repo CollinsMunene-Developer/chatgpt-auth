@@ -1,5 +1,4 @@
 import { LoginForm } from "@/components/login-form"
-import { ModeToggle } from "@/components/mode-toggle"
 import { backgroundimg } from "@/public/images/images"
 import { CloudCogIcon, GalleryVerticalEnd } from "lucide-react"
 import Image from "next/image"
@@ -18,9 +17,7 @@ export default function LoginPage() {
           <span> <strong>CLOUD</strong>MAGIC</span>
           </a>
         </div>
-        <div className="">
-          <ModeToggle />
-        </div>
+
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">

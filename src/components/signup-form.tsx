@@ -43,36 +43,31 @@ export function SignupForm({
     e.preventDefault();
     setError(null);
     setSuccess(false);
-
+  
     if (!isEmailValid || !isPasswordValid || !isFullNameValid) {
       setError("Please ensure all fields are valid.");
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
       const formData = new FormData();
       formData.append("email", email);
       formData.append("password", password);
       formData.append("fullname", fullName);
-
+  
       const response = await signup(formData);
-
+  
       if (response?.error) {
         setError(response.error.message || "Registration failed. Try again.");
         return;
       }
-
+  
       setSuccess(true);
-      setEmail("");
-      setPassword("");
-      setFullName("");
-
-      // Redirect after successful signup
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 2000);
+      
+      // Redirect to verification page instead of login
+      router.push("/auth/verify-email");
     } catch (err) {
       setError(
         err instanceof Error
@@ -83,7 +78,6 @@ export function SignupForm({
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className=" flex flex-col gap-4">  
           <form

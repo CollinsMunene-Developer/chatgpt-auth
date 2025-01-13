@@ -16,6 +16,8 @@ interface AuthResponse {
     code: string;
   };
   success?: boolean;
+  email?: string;
+  isVerified?: boolean;
 }
 export async function login(formData: FormData): Promise<AuthResponse> {
   const supabase = await createClient();
@@ -214,24 +216,21 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
     success: true,
   };
 }
-
 export async function resetPassword(formData: FormData): Promise<AuthResponse> {
   const supabase = await createClient();
+  const password = formData.get("password") as string;
 
-  const newPassword = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-
-  if (newPassword !== confirmPassword) {
+  if (!password) {
     return {
       error: {
-        message: "Passwords do not match",
-        code: "PASSWORD_MISMATCH",
+        message: "Password is required",
+        code: "INVALID_PASSWORD",
       },
     };
   }
 
   const { error } = await supabase.auth.updateUser({
-    password: newPassword,
+    password: password,
   });
 
   if (error) {
@@ -243,6 +242,169 @@ export async function resetPassword(formData: FormData): Promise<AuthResponse> {
     };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/auth/login?reset=success");
+  // Sign out the user after password reset
+  await supabase.auth.signOut();
+
+  return {
+    success: true,
+  };
 }
+export async function checkEmailVerification(): Promise<AuthResponse> {
+  const supabase = await createClient();
+  
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error) {
+    return {
+      error: {
+        message: "Error checking verification status",
+        code: "VERIFICATION_ERROR",
+      },
+    };
+  }
+
+  if (!user) {
+    return {
+      error: {
+        message: "No user found",
+        code: "NO_USER",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    email: user.email,
+    isVerified: user.email_confirmed_at !== null,
+  };
+}
+
+export async function resendVerificationEmail(): Promise<AuthResponse> {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user?.email) {
+    return {
+      error: {
+        message: "No email found",
+        code: "NO_EMAIL",
+      },
+    };
+  }
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: user.email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return {
+      error: {
+        message: "Failed to resend verification email",
+        code: "RESEND_ERROR",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    email: user.email,
+  };
+}
+//google signup
+export async function signInWithGoogle(): Promise<AuthResponse & { url?: string }> {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback?type=oauth`,
+      scopes: 'email profile',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error) {
+    console.error('Google sign in error:', error);
+    return {
+      error: {
+        message: "Failed to initiate Google sign in",
+        code: "GOOGLE_SIGNIN_ERROR",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    url: data?.url,
+  };
+}
+
+// Create a new function to handle the OAuth callback
+export async function handleOAuthCallback(code: string): Promise<AuthResponse> {
+  const supabase = await createClient();
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error || !user) {
+      return {
+        error: {
+          message: "Failed to get user details",
+          code: "USER_FETCH_ERROR",
+        },
+      };
+    }
+
+    // Check if user exists in our users table
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!existingUser) {
+      // Create user profile in users table
+      const { error: profileError } = await supabase.from('users').insert([
+        {
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata.full_name || user.user_metadata.name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        return {
+          error: {
+            message: "Failed to create user profile",
+            code: "PROFILE_ERROR",
+          },
+        };
+      }
+    }
+
+    return {
+      success: true,
+      email: user.email,
+    };
+  } catch (error) {
+    console.error("OAuth callback error:", error);
+    return {
+      error: {
+        message: "Failed to process authentication",
+        code: "OAUTH_CALLBACK_ERROR",
+      },
+    };
+  }
+}
+

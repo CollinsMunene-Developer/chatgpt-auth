@@ -98,13 +98,13 @@ const UserNav = () => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-          Dashboard
+        <DropdownMenuItem onClick={() => router.push('/account')}>
+          Account
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/settings')}>
           Settings
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push('/settings')}>
+        <DropdownMenuItem onClick={() => router.push('#')}>
           <ModeToggle /> Change mode
         </DropdownMenuItem>
         <DropdownMenuSeparator />

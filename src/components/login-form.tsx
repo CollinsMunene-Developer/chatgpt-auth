@@ -9,13 +9,14 @@ import {
   ValidationFeedback,
   emailRules,
   passwordRules,
-
 } from "./auth-validation-alert";
 import { Loader2 } from "lucide-react";
 import { SuccessIndicator } from "./success-indicator";
-import { login } from "@/actions/auth-service";
+import { login, signInWithGoogle } from "@/actions/auth-service";
+import { useRouter } from "next/navigation";
 
 export function LoginForm({
+
   className,
   onSubmit,
   ...props
@@ -25,6 +26,7 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [showValidation, setShowValidation] = useState({
     email: false,
@@ -37,6 +39,7 @@ export function LoginForm({
   );
 
   const { validateLogin } = useAuthenticationFlow();
+  const Router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +54,11 @@ export function LoginForm({
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('email', email);
-      formData.append('password', password);
+      formData.append("email", email);
+      formData.append("password", password);
 
       const response = await login(formData);
-      
+
       if (response.error) {
         setError(response.error.message);
         return;
@@ -67,6 +70,42 @@ export function LoginForm({
       setIsSubmitting(false);
     }
   };
+
+// LoginForm.tsx (updated handleGoogleSignIn function)
+const handleGoogleSignIn = async () => {
+  setError(undefined);
+  setIsGoogleLoading(true);
+  try {
+    console.log('Starting Google sign in...');
+    const response = await signInWithGoogle();
+    console.log('Sign in response:', response);
+    
+    if (response.error) {
+      console.error('Sign in error:', response.error);
+      setError(response.error.message);
+      return;
+    }
+
+
+    // Handle the redirect on the client side
+    if (response.url) {
+      window.location.href = response.url;
+    } else {
+      setError("Authentication configuration error");
+    }
+        //redirect to home page
+        Router.push('/');
+  } catch (error) {
+    console.error('Sign in exception:', error);
+    setError(
+      error instanceof Error 
+        ? error.message 
+        : "Failed to connect to Google. Please try again."
+    );
+  } finally {
+    setIsGoogleLoading(false);
+  }
+};
 
   return (
     <form
@@ -81,7 +120,11 @@ export function LoginForm({
         </p>
       </div>
 
-      {error && <div className="text-sm text-red-500 text-center">{error}</div>}
+      {error && (
+        <div className="text-sm text-red-500 text-center p-2 bg-red-50 rounded-md">
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-6">
         <div className="grid gap-2">
@@ -97,11 +140,15 @@ export function LoginForm({
               setShowValidation((prev) => ({ ...prev, email: true }))
             }
             className={cn(isEmailValid && email && "border-green-500")}
+            disabled={isSubmitting || isGoogleLoading}
           />
           {showValidation.email && !isEmailValid && (
             <ValidationFeedback value={email} rules={emailRules} type="email" />
           )}
-            <SuccessIndicator show={isEmailValid && email !== ""} fieldName="Email" />
+          <SuccessIndicator
+            show={isEmailValid && email !== ""}
+            fieldName="Email"
+          />
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
@@ -109,6 +156,7 @@ export function LoginForm({
             <a
               href="/auth/forgot-password"
               className="ml-auto text-sm underline-offset-4 hover:underline"
+              tabIndex={isSubmitting || isGoogleLoading ? -1 : 0}
             >
               Forgot your password?
             </a>
@@ -123,6 +171,7 @@ export function LoginForm({
               setShowValidation((prev) => ({ ...prev, password: true }))
             }
             className={cn(isPasswordValid && password && "border-green-500")}
+            disabled={isSubmitting || isGoogleLoading}
           />
           {showValidation.password && !isPasswordValid && (
             <ValidationFeedback
@@ -131,24 +180,29 @@ export function LoginForm({
               type="password"
             />
           )}
-          <SuccessIndicator show={isPasswordValid && password !== ""} fieldName="Password" />
+          <SuccessIndicator
+            show={isPasswordValid && password !== ""}
+            fieldName="Password"
+          />
         </div>
         <Button
           type="submit"
           className="w-full"
           disabled={
             isSubmitting ||
+            isGoogleLoading ||
             !emailRules.every((rule) => rule.validate(email)) ||
-            !passwordRules.every((rule) => rule.validate(password)) 
-
+            !passwordRules.every((rule) => rule.validate(password))
           }
         >
-          {isSubmitting ?(
+          {isSubmitting ? (
             <>
               <Loader2 className="animate-spin h-5 w-5 mr-3" />
               Logging in...
             </>
-          ) : "Login"}
+          ) : (
+            "Login"
+          )}
         </Button>
         <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
           <span className="relative z-10 bg-background px-2 text-muted-foreground">
@@ -160,7 +214,7 @@ export function LoginForm({
             variant="outline"
             className="w-full"
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGoogleLoading}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -176,31 +230,40 @@ export function LoginForm({
           </Button>
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full relative"
             type="button"
-            disabled={isSubmitting}
+            onClick={handleGoogleSignIn}
+            disabled={isSubmitting || isGoogleLoading}
           >
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
-              <path
-                fill="#FFC107"
-                d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
-              ></path>
-              <path
-                fill="#FF3D00"
-                d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
-              ></path>
-              <path
-                fill="#4CAF50"
-                d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
-              ></path>
-              <path
-                fill="#1976D2"
-                d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
-              ></path>
-            </svg>
-            Login with Google
+            {isGoogleLoading ? (
+              <Loader2 className="animate-spin h-5 w-5 absolute left-4" />
+            ) : (
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
+                <path
+                  fill="#FFC107"
+                  d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
+                ></path>
+                <path
+                  fill="#FF3D00"
+                  d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
+                ></path>
+                <path
+                  fill="#4CAF50"
+                  d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
+                ></path>
+                <path
+                  fill="#1976D2"
+                  d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
+                ></path>
+              </svg>
+            )}
+            {isGoogleLoading ? "Connecting..." : "Login with Google"}
           </Button>
-          <Button variant="outline" className="w-full">
+          <Button 
+            variant="outline" 
+            className="w-full"
+            disabled={isSubmitting || isGoogleLoading}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               x="0px"
@@ -236,7 +299,11 @@ export function LoginForm({
       </div>
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
-        <a href="/auth/signup" className="underline underline-offset-4">
+        <a 
+          href="/auth/signup" 
+          className="underline underline-offset-4"
+          tabIndex={isSubmitting || isGoogleLoading ? -1 : 0}
+        >
           Sign up
         </a>
       </div>

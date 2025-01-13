@@ -11,9 +11,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Clone the request URL to preserve query parameters
   const requestUrl = request.nextUrl.clone()
-  
   let response = NextResponse.next({
     request,
   })
@@ -61,32 +59,40 @@ export async function middleware(request: NextRequest) {
 
   const path = requestUrl.pathname
 
-  // Allow access to auth-related routes
+  // Handle auth routes
   if (path.startsWith('/auth/')) {
-    if (user && path === '/auth/login') {
+    // Allow access to verification page
+    if (path === '/auth/verify-email') {
+      if (!user) {
+        return NextResponse.redirect(new URL('/auth/login', request.url))
+      }
+      return response
+    }
+
+    // Redirect verified users away from login/signup
+    if (user && user.email_confirmed_at && (path === '/auth/login' || path === '/auth/signup')) {
       return NextResponse.redirect(new URL('/', request.url))
     }
+
+    // Allow access to other auth pages
     return response
   }
 
-  // For all other pages, require authentication
+  // Protect all other routes
   if (!user) {
     const redirectUrl = new URL('/auth/login', request.url)
     redirectUrl.searchParams.set('redirect_to', path)
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Require email verification for protected routes
+  if (!user.email_confirmed_at && !path.startsWith('/auth/')) {
+    return NextResponse.redirect(new URL('/auth/verify-email', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
