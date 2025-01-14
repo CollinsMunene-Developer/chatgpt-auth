@@ -76,27 +76,25 @@ const handleGoogleSignIn = async () => {
   setError(undefined);
   setIsGoogleLoading(true);
   try {
-    console.log('Starting Google sign in...');
     const response = await signInWithGoogle();
-    console.log('Sign in response:', response);
     
     if (response.error) {
-      console.error('Sign in error:', response.error);
       setError(response.error.message);
       return;
     }
 
-
-    // Handle the redirect on the client side
     if (response.url) {
+      // Store the return URL in localStorage before redirecting
+      localStorage.setItem('returnTo', '/');
       window.location.href = response.url;
     } else {
       setError("Authentication configuration error");
     }
-        //redirect to home page
-        Router.push('/');
+
+    // Successful login is handled by the auth service redirect to homepage
+    Router.push("/");
+
   } catch (error) {
-    console.error('Sign in exception:', error);
     setError(
       error instanceof Error 
         ? error.message 

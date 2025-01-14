@@ -44,7 +44,7 @@ export async function login(formData: FormData): Promise<AuthResponse> {
   if (!userExists) {
     return {
       error: {
-        message: "Account does not exist. Please sign up first.",
+        message: "Invalid credentials",
         code: "USER_NOT_FOUND",
       },
     };
@@ -86,7 +86,7 @@ export async function signup(formData: FormData): Promise<AuthResponse> {
   }
 
   try {
-    // Check if user exists by querying the users table
+    // Check if user exists
     const { data: existingUser, error: queryError } = await supabase
       .from("users")
       .select("id")
@@ -164,11 +164,10 @@ export async function signup(formData: FormData): Promise<AuthResponse> {
       };
     }
 
-    revalidatePath("/", "layout");
-
-    // Return success before redirect
     return {
       success: true,
+      email: email,
+      isVerified: false,
     };
   } catch (error) {
     console.error("Unexpected error during signup:", error);
@@ -180,6 +179,7 @@ export async function signup(formData: FormData): Promise<AuthResponse> {
     };
   }
 }
+
 export async function forgotPassword(email: string): Promise<AuthResponse> {
   const supabase = await createClient();
 
@@ -251,8 +251,11 @@ export async function resetPassword(formData: FormData): Promise<AuthResponse> {
 }
 export async function checkEmailVerification(): Promise<AuthResponse> {
   const supabase = await createClient();
-  
-  const { data: { user }, error } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error) {
     return {
@@ -281,9 +284,11 @@ export async function checkEmailVerification(): Promise<AuthResponse> {
 
 export async function resendVerificationEmail(): Promise<AuthResponse> {
   const supabase = await createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user?.email) {
     return {
       error: {
@@ -294,7 +299,7 @@ export async function resendVerificationEmail(): Promise<AuthResponse> {
   }
 
   const { error } = await supabase.auth.resend({
-    type: 'signup',
+    type: "signup",
     email: user.email,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
@@ -316,23 +321,25 @@ export async function resendVerificationEmail(): Promise<AuthResponse> {
   };
 }
 //google signup
-export async function signInWithGoogle(): Promise<AuthResponse & { url?: string }> {
+export async function signInWithGoogle(): Promise<
+  AuthResponse & { url?: string }
+> {
   const supabase = await createClient();
-  
+
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider: "google",
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback?type=oauth`,
-      scopes: 'email profile',
+      scopes: "email profile",
       queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+        access_type: "offline",
+        prompt: "consent",
       },
     },
   });
 
   if (error) {
-    console.error('Google sign in error:', error);
+    console.error("Google sign in error:", error);
     return {
       error: {
         message: "Failed to initiate Google sign in",
@@ -350,10 +357,13 @@ export async function signInWithGoogle(): Promise<AuthResponse & { url?: string 
 // Create a new function to handle the OAuth callback
 export async function handleOAuthCallback(code: string): Promise<AuthResponse> {
   const supabase = await createClient();
-  
+
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
     if (error || !user) {
       return {
         error: {
@@ -365,14 +375,14 @@ export async function handleOAuthCallback(code: string): Promise<AuthResponse> {
 
     // Check if user exists in our users table
     const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
       .single();
 
     if (!existingUser) {
       // Create user profile in users table
-      const { error: profileError } = await supabase.from('users').insert([
+      const { error: profileError } = await supabase.from("users").insert([
         {
           id: user.id,
           email: user.email,
@@ -407,4 +417,3 @@ export async function handleOAuthCallback(code: string): Promise<AuthResponse> {
     };
   }
 }
-

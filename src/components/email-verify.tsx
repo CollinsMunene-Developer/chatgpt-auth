@@ -1,126 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Mail, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { checkEmailVerification, resendVerificationEmail } from "@/actions/auth-service";
 
-export default function VerifyEmailPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState<string>("");
-  const [isVerified, setIsVerified] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
+export default function VerifyEmail() {
+  const [email, setEmail] = useState<string>('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const checkVerification = async () => {
-      const response = await checkEmailVerification();
-      
-      if (response.error) {
-        setError(response.error.message);
-        return;
-      }
-
-      setEmail(response.email || "");
-      
-      if (response.isVerified) {
-        setIsVerified(true);
-        // Redirect to login after showing success message
-        setTimeout(() => {
-          router.push("/auth/login");
-        }, 3000);
-      }
-    };
-
-    const interval = setInterval(checkVerification, 3000);
-    checkVerification();
-
-    return () => clearInterval(interval);
-  }, [router]);
+    // Try to get email from URL params first, then localStorage
+    const emailFromParams = searchParams.get('email');
+    const emailFromStorage = localStorage.getItem('verificationEmail');
+    
+    if (emailFromParams) {
+      setEmail(emailFromParams);
+    } else if (emailFromStorage) {
+      setEmail(emailFromStorage);
+    }
+  }, [searchParams]);
 
   const handleResendEmail = async () => {
-    setIsSubmitting(true);
-    setError(undefined);
+    setIsResending(true);
+    setResendStatus('idle');
 
     try {
       const response = await resendVerificationEmail();
-      if (response.error) {
-        setError(response.error.message);
+      
+      if (response.success) {
+        setResendStatus('success');
+      } else {
+        setResendStatus('error');
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setResendStatus('error');
     } finally {
-      setIsSubmitting(false);
+      setIsResending(false);
     }
   };
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-bold">Verify your email</h1>
-          <p className="text-sm text-muted-foreground">
-            We've sent a verification link to {email}
-          </p>
+    <div className="container mx-auto max-w-md p-6">
+      <div className="text-center space-y-6">
+        <h1 className="text-2xl font-bold">Verify your email</h1>
+        <p className="text-muted-foreground">
+          We've sent a verification link to{' '}
+          <span className="font-medium text-foreground">{email}</span>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Please check your email and click the verification link to complete your registration.
+        </p>
+        
+        <div className="space-y-2">
+          <Button
+            onClick={handleResendEmail}
+            disabled={isResending}
+            variant="outline"
+            className="w-full"
+          >
+            {isResending ? 'Sending...' : 'Resend verification email'}
+          </Button>
+          
+          {resendStatus === 'success' && (
+            <p className="text-sm text-green-600">
+              Verification email has been resent successfully!
+            </p>
+          )}
+          
+          {resendStatus === 'error' && (
+            <p className="text-sm text-red-600">
+              Failed to resend verification email. Please try again.
+            </p>
+          )}
         </div>
 
-        {isVerified ? (
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-800">Email verified successfully!</AlertTitle>
-            <AlertDescription className="text-green-700">
-              Your email has been verified. You will be redirected to login.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="space-y-4">
-            <Alert>
-              <Mail className="h-4 w-4" />
-              <AlertTitle>Check your inbox</AlertTitle>
-              <AlertDescription>
-                Click the link in the verification email to confirm your account.
-                The link will expire in 24 hours.
-              </AlertDescription>
-            </Alert>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Didn't receive the email? Check your spam folder or click below to resend.
-              </p>
-              
-              <Button 
-                onClick={handleResendEmail} 
-                disabled={isSubmitting}
-                variant="outline"
-                className="w-full"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Resend verification email"
-                )}
-              </Button>
-
-              <Link href="/auth/login">
-                <Button variant="ghost" className="w-full">
-                  Back to login
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+        <p className="text-sm text-muted-foreground">
+          Didn't receive an email? Check your spam folder or{' '}
+          <button
+            onClick={handleResendEmail}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            request another email
+          </button>
+        </p>
       </div>
     </div>
   );

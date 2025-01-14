@@ -38,7 +38,6 @@ export function SignupForm({
   const isEmailValid = emailRules.every((rule) => rule.validate(email));
   const isPasswordValid = passwordRules.every((rule) => rule.validate(password));
   const isFullNameValid = fullNameRules.every((rule) => rule.validate(fullName));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -66,8 +65,14 @@ export function SignupForm({
   
       setSuccess(true);
       
-      // Redirect to verification page instead of login
-      router.push("/auth/verify-email");
+      // Store email in localStorage for verification page
+      if (response.email) {
+        localStorage.setItem('verificationEmail', response.email);
+      }
+      
+      // Redirect to verification page
+      router.push(`/auth/verify-email?email=${response.email}`);
+  
     } catch (err) {
       setError(
         err instanceof Error
